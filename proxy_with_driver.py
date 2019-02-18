@@ -6,6 +6,7 @@ import time
 import shared_buffer
 from config import *
 from util import *
+from pss_driver import MatPowerDriver
 
 
 def proxy(debug=False):
@@ -23,11 +24,12 @@ def proxy(debug=False):
     sb.open(PLOT_LOAD_BUS_Q, isProxy=True)
     sb.open(PLOT_GEN_BUS_V, isProxy=True)
     sb.open(PLOT_PILOT_BUS_V, isProxy=True)
+
+    mp = MatPowerDriver(workingdir="data")
+    mp.open("/home/frank/Workspace/svc/data/case39")
     
     while True:
-        # Create case
-        openfile = open("power_simulation.m", "w")
-        openfile.write('''mpc = loadcase('data/case39');\n''')
+        writelist = []
 
         for gen in GEN:
             sender_id, msg = sb.read(GEN_BUS_V%gen)
@@ -37,9 +39,9 @@ def proxy(debug=False):
                 vg[gen] = value
                 if debug and gen == 30: print_buffer(GEN_BUS_V%gen, msg, isWrite=False)
 
-            openfile.write('''mpc.gen(find(mpc.gen(:,1)==%d),6) = %f;\n'''%(gen, vg[gen]))
-
-        for load in q.keys():
+            writelist += [("gen", str(gen), "v", str(vg[gen]))]
+            
+        for load in LOAD:
             sender_id, msg = sb.read(LOAD_BUS_Q%load)
             if msg != "":
                 key, value = str_to_kv(msg)
@@ -47,18 +49,15 @@ def proxy(debug=False):
                 q[load] = value
                 if debug and load == 1: print_buffer(LOAD_BUS_Q%load, msg, isWrite=False)
             
-            openfile.write('''mpc.bus(find(mpc.bus(:,1)==%d),4) = %f;\n'''%(load, q[load]))
+            writelist += [("load", str(load), "q", str(q[load]))]
 
-        openfile.write('''result = runpf(mpc);\n''')
-        openfile.write('''csvwrite("data/result_bus.csv", result.bus);''')
-        openfile.close()
-
-        # Solve power flow and read result
-        subprocess.check_call(["octave", "power_simulation.m"],
-                              stdout=DEVNULL, stderr=subprocess.STDOUT)
-        data = np.genfromtxt('data/result_bus.csv', delimiter=',')
-        vp = {int(d[0]):float(d[7]) for d in data if int(d[0]) in PILOT_BUS}
-        assert(len(vp.keys()) == len(PILOT_BUS))
+        mp.write_multiple(writelist)
+        
+        # Solve power flow
+        mp.run_pf()
+        
+        # Read result
+        vp = {bus:float(mp.read("bus", str(bus), "v")) for bus in PILOT_BUS}
         
         # Write result to shared buffer
         for bus in PILOT_BUS:

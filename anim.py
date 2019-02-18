@@ -60,16 +60,15 @@ def update(num):
         ax2.set_ylim(-0.015, 0.015)
         ax2.legend(loc=2)
         
-    for load in LOAD:
-        ax3.plot(range(size), q_t[load], "-", markersize=3) #, label="Load %d"%load)
-        ax3.set_title("Reactive power fluctuations")
-        ax3.set_ylim(0.85, 1.15)
-        # ax3.legend(loc=2,ncol=2)
+    load = LOAD[0]
+    ax3.plot(range(size), q_t[load], "-o", markersize=3)
+    ax3.set_title("Reactive power fluctuations")
+    ax3.set_ylim(LOAD_PQ[load][1] * 0.85, LOAD_PQ[load][1] * 1.15)
         
-size = 20
+size = 100
 vg_t = {gen:[0]*size for gen in GEN}
 vp_t = {bus:[0]*size for bus in PILOT_BUS}
-q_t = {load:[1]*size for load in LOAD}
+q_t = {load:[LOAD_PQ[load][1]]*size for load in LOAD}
 
 sb = shared_buffer.shared_buffer_array()
 sb.open(PLOT_GEN_BUS_V, isProxy=False)
@@ -77,9 +76,9 @@ sb.open(PLOT_LOAD_BUS_Q, isProxy=False)
 sb.open(PLOT_PILOT_BUS_V, isProxy=False)
 
 fig = plt.figure()
-ax1 = fig.add_subplot(131)
-ax2 = fig.add_subplot(132)
-ax3 = fig.add_subplot(133)
+ax1 = fig.add_subplot(311)
+ax2 = fig.add_subplot(312)
+ax3 = fig.add_subplot(313)
 ani = animation.FuncAnimation(fig, update, fargs=[], interval=1000)
 
 plt.show()
