@@ -26,7 +26,7 @@ def proxy(debug=False):
     
     while True:
         # Create case
-        openfile = open("power_simulation.m", "w")
+        openfile = open("data/simulation.m", "w")
         openfile.write('''mpc = loadcase('data/case39');\n''')
 
         for gen in GEN:

@@ -46,7 +46,7 @@ def update(num):
     for ax in [ax1, ax2, ax3]:
         ax.clear()
         ax.grid(True)
-        ax.set_xticks([])
+        # ax.set_xticks([])
         
     for bus in PILOT_BUS:
         ax1.plot(range(size), vp_t[bus], "-o", markersize=3, label="Bus %d"%bus)
